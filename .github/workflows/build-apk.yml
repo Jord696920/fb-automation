@@ -42,12 +42,8 @@ jobs:
         echo "Looking for build.gradle files..."
         find . -name "build.gradle" -type f
 
-    - name: Setup Gradle Wrapper
-      run: |
-        echo "Setting up Gradle wrapper..."
-        gradle wrapper --gradle-version 7.6.4
-        chmod +x ./gradlew
-        echo "Gradle wrapper setup complete"
+    - name: Make gradlew executable
+      run: chmod +x ./gradlew
 
     - name: Verify Gradle setup
       run: |
