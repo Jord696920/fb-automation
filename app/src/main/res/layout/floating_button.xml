@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="60dp"
+    android:layout_height="60dp">
+
+    <ImageView
+        android:id="@+id/floating_button"
+        android:layout_width="60dp"
+        android:layout_height="60dp"
+        android:background="@drawable/floating_button_background"
+        android:src="@drawable/ic_camera"
+        android:scaleType="center"
+        android:clickable="true"
+        android:focusable="true" />
+
+</FrameLayout>
