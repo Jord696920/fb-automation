@@ -45,7 +45,7 @@ jobs:
     - name: Setup Gradle Wrapper
       run: |
         echo "Setting up Gradle wrapper..."
-        gradle wrapper --gradle-version 8.0
+        gradle wrapper --gradle-version 7.6.4
         chmod +x ./gradlew
         echo "Gradle wrapper setup complete"
 
