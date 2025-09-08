@@ -42,13 +42,21 @@ jobs:
         echo "Looking for build.gradle files..."
         find . -name "build.gradle" -type f
 
-    - name: Grant execute permission for gradlew
-      run: chmod +x ./gradlew
-      working-directory: ./
+    - name: Setup Gradle Wrapper
+      run: |
+        echo "Setting up Gradle wrapper..."
+        gradle wrapper --gradle-version 8.0
+        chmod +x ./gradlew
+        echo "Gradle wrapper setup complete"
+
+    - name: Verify Gradle setup
+      run: |
+        echo "Verifying Gradle setup..."
+        ./gradlew --version
+        echo "Gradle verification complete"
 
     - name: Clean and build debug APK
       run: ./gradlew clean assembleDebug --stacktrace --info
-      working-directory: ./
 
     - name: List all build outputs
       run: |
