@@ -19,29 +19,29 @@ jobs:
           java-version: 17
           cache: gradle
 
-      # Set up base SDK env only (no packages here)
+      # Only set env; we'll install packages ourselves
       - name: Set up Android SDK (env only)
         uses: android-actions/setup-android@v3
 
-      # Manually install cmdline-tools + platform-tools + platform + build-tools
-      - name: Install Android SDK packages (non-interactive)
+      - name: Install Android SDK packages (robust, non-interactive)
         shell: bash
         run: |
-          set -euo pipefail
+          set -euo nounset   # intentionally NOT setting pipefail
           ANDROID_SDK_ROOT="${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}"
-          # fall back to preinstalled sdkmanager if "latest" isn't there yet
+
+          # pick an sdkmanager (bootstrap with preinstalled 16.0 if needed)
           SDKMANAGER="${ANDROID_SDK_ROOT}/cmdline-tools/latest/bin/sdkmanager"
           if [ ! -x "$SDKMANAGER" ]; then
-            SDKMANAGER="/usr/local/lib/android/sdk/cmdline-tools/16.0/bin/sdkmanager"
+            BOOT="/usr/local/lib/android/sdk/cmdline-tools/16.0/bin/sdkmanager"
+            yes | "$BOOT" "cmdline-tools;latest" >/dev/null 2>&1 || true
+            SDKMANAGER="${ANDROID_SDK_ROOT}/cmdline-tools/latest/bin/sdkmanager"
           fi
-          yes | "$SDKMANAGER" --licenses || true
-          # ensure latest cmdline-tools first
-          yes | "$SDKMANAGER" "cmdline-tools;latest"
-          # switch to the latest sdkmanager we just installed
-          SDKMANAGER="${ANDROID_SDK_ROOT}/cmdline-tools/latest/bin/sdkmanager"
-          yes | "$SDKMANAGER" --licenses
-          # install the exact packages we need (space-separated args)
-          yes | "$SDKMANAGER" "platform-tools" "platforms;android-34" "build-tools;34.0.0"
+
+          # accept licenses; ignore broken pipe exit from `yes`
+          yes | "$SDKMANAGER" --licenses >/dev/null 2>&1 || true
+
+          # install exact packages; space-separated args avoid multi-line parsing bugs
+          "$SDKMANAGER" --install "platform-tools" "platforms;android-34" "build-tools;34.0.0"
 
       - name: Make gradlew executable
         run: chmod +x ./gradlew
@@ -56,5 +56,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: app-debug
-          path: android-app/app/build/outputs/apk/debug/*.apk
+          path: app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
