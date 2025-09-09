@@ -11,16 +11,21 @@ jobs:
         working-directory: android-app
     steps:
       - uses: actions/checkout@v4
-      - name: Debug layout
+
+      # NEW: force-accept all Android SDK licenses on the preinstalled sdkmanager
+      - name: Pre-accept Android SDK licenses (non-interactive)
         run: |
-          pwd; ls -la
-          find . -maxdepth 2 -type d | sort
+          if [ -x /usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager ]; then
+            yes | /usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager --licenses || true
+          fi
+
       - name: Set up Java
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: 17
           cache: gradle
+
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
         with:
@@ -29,12 +34,18 @@ jobs:
             cmdline-tools;latest
             platforms;android-34
             build-tools;34.0.0
+          accept-android-sdk-licenses: true
+          log-accepted-android-sdk-licenses: true
+
       - name: Make gradlew executable
         run: chmod +x ./gradlew
+
       - name: Build debug APK
         run: ./gradlew clean :app:assembleDebug --stacktrace --info --no-daemon
+
       - name: Verify APK exists
         run: test -f app/build/outputs/apk/debug/app-debug.apk
+
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
