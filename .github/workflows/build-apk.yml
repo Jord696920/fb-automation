@@ -12,13 +12,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # NEW: force-accept all Android SDK licenses on the preinstalled sdkmanager
-      - name: Pre-accept Android SDK licenses (non-interactive)
-        run: |
-          if [ -x /usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager ]; then
-            yes | /usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager --licenses || true
-          fi
-
       - name: Set up Java
         uses: actions/setup-java@v4
         with:
@@ -26,16 +19,29 @@ jobs:
           java-version: 17
           cache: gradle
 
-      - name: Set up Android SDK
+      # Set up base SDK env only (no packages here)
+      - name: Set up Android SDK (env only)
         uses: android-actions/setup-android@v3
-        with:
-          packages: |
-            platform-tools
-            cmdline-tools;latest
-            platforms;android-34
-            build-tools;34.0.0
-          accept-android-sdk-licenses: true
-          log-accepted-android-sdk-licenses: true
+
+      # Manually install cmdline-tools + platform-tools + platform + build-tools
+      - name: Install Android SDK packages (non-interactive)
+        shell: bash
+        run: |
+          set -euo pipefail
+          ANDROID_SDK_ROOT="${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}"
+          # fall back to preinstalled sdkmanager if "latest" isn't there yet
+          SDKMANAGER="${ANDROID_SDK_ROOT}/cmdline-tools/latest/bin/sdkmanager"
+          if [ ! -x "$SDKMANAGER" ]; then
+            SDKMANAGER="/usr/local/lib/android/sdk/cmdline-tools/16.0/bin/sdkmanager"
+          fi
+          yes | "$SDKMANAGER" --licenses || true
+          # ensure latest cmdline-tools first
+          yes | "$SDKMANAGER" "cmdline-tools;latest"
+          # switch to the latest sdkmanager we just installed
+          SDKMANAGER="${ANDROID_SDK_ROOT}/cmdline-tools/latest/bin/sdkmanager"
+          yes | "$SDKMANAGER" --licenses
+          # install the exact packages we need (space-separated args)
+          yes | "$SDKMANAGER" "platform-tools" "platforms;android-34" "build-tools;34.0.0"
 
       - name: Make gradlew executable
         run: chmod +x ./gradlew
