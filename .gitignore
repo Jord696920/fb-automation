@@ -1,0 +1,17 @@
+﻿# Android
+**/.gradle/
+**/.idea/
+**/build/
+local.properties
+*.iml
+
+# Keep wrapper + scripts
+!android-app/gradle/wrapper/gradle-wrapper.jar
+!android-app/gradle/wrapper/gradle-wrapper.properties
+!android-app/gradlew
+!android-app/gradlew.bat
+
+# Web
+node_modules/
+.next/
+dist/

@@ -1,0 +1,73 @@
+name: Build Android APK
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+
+    - name: Setup Android SDK
+      uses: android-actions/setup-android@v3
+
+    - name: Cache Gradle packages
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.gradle/caches
+          ~/.gradle/wrapper
+        key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+        restore-keys: |
+          ${{ runner.os }}-gradle-
+
+    - name: Check project structure
+      run: |
+        echo "Repository root contents:"
+        ls -la
+        echo "Looking for Android project..."
+        find . -name "gradlew" -type f
+        echo "Looking for build.gradle files..."
+        find . -name "build.gradle" -type f
+
+    - name: Make gradlew executable
+      run: chmod +x ./gradlew
+
+    - name: Verify Gradle setup
+      run: |
+        echo "Verifying Gradle setup..."
+        ./gradlew --version
+        echo "Gradle verification complete"
+
+    - name: Clean and build debug APK
+      run: ./gradlew clean assembleDebug --stacktrace --info
+
+    - name: List all build outputs
+      run: |
+        echo "Searching for any APK files in the entire repository:"
+        find . -name "*.apk" -type f -ls || echo "No APK files found"
+        echo "Checking app/build directory structure:"
+        ls -la app/build/ || echo "app/build directory not found"
+        echo "Checking for outputs directory:"
+        find . -path "*/build/outputs*" -type d || echo "No build/outputs directories found"
+
+    - name: Upload APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: SEQ-FB-Automation-APK
+        path: |
+          **/build/outputs/apk/**/*.apk
+          **/*.apk
+        if-no-files-found: warn
