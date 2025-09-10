@@ -19,6 +19,7 @@ import android.view.WindowManager
 import android.widget.ImageView
 import android.widget.Toast
 import androidx.core.app.NotificationCompat
+import android.content.pm.ServiceInfo
 import kotlinx.coroutines.*
 
 class FloatingButtonService : Service() {
@@ -61,27 +62,34 @@ class FloatingButtonService : Service() {
     }
     
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        when (intent?.action) {
-            "START_SESSION" -> {
-                isSessionActive = true
-                val __notif = androidx.core.app.NotificationCompat.Builder(this, "fb_session")
-    .setSmallIcon(R.drawable.ic_notification)
-    .setContentTitle("FB Automation running")
-    .setContentText("Floating button active on Facebook")
-    .setOngoing(true)
-    .build()
-val __id = 1001
-if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
-    val __notif = androidx.core.app.NotificationCompat.Builder(this, "fb_session")
-    .setSmallIcon(R.drawable.ic_notification)
-    .setContentTitle("FB Automation running")
-    .setContentText("Floating button active on Facebook")
-    .setOngoing(true)
-    .build()
-val __id = 1001
-if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
-    startForeground(__id, __notif, ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
-} else {
+    when (intent?.action) {
+        "START_SESSION" -> {
+            isSessionActive = true
+            val notif = NotificationCompat.Builder(this, "fb_session")
+                .setSmallIcon(R.drawable.ic_notification)
+                .setContentTitle("FB Automation running")
+                .setContentText("Floating button active on Facebook")
+                .setOngoing(true)
+                .build()
+            val id = 1001
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                startForeground(id, notif, ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
+            } else {
+                startForeground(id, notif)
+            }
+            try { if (AppDetectionService.isFacebookActive) showFloatingButton() } catch (_: Throwable) {}
+        }
+        "STOP_SESSION" -> {
+            isSessionActive = false
+            hideFloatingButton()
+            stopForeground(true)
+            stopSelf()
+        }
+        "SHOW" -> showFloatingButton()
+        "HIDE" -> hideFloatingButton()
+    }
+    return START_STICKY
+}else {
     startForeground(__id, __notif)
 }} else {
     val __notif = androidx.core.app.NotificationCompat.Builder(this, "fb_session")
@@ -221,4 +229,5 @@ if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
         serviceScope.cancel()
     }
 }
+
 
