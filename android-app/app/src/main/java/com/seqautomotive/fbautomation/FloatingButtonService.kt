@@ -1,4 +1,4 @@
-package com.seqautomotive.fbautomation
+﻿package com.seqautomotive.fbautomation
 
 import android.app.Notification
 import android.app.NotificationChannel
@@ -64,7 +64,18 @@ class FloatingButtonService : Service() {
         when (intent?.action) {
             "START_SESSION" -> {
                 isSessionActive = true
-                startForeground(NOTIFICATION_ID, createNotification())
+                val __notif = androidx.core.app.NotificationCompat.Builder(this, "fb_session")
+    .setSmallIcon(R.drawable.ic_notification)
+    .setContentTitle("FB Automation running")
+    .setContentText("Floating button active on Facebook")
+    .setOngoing(true)
+    .build()
+val __id = 1001
+if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+    startForeground(__id, __notif, ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
+} else {
+    startForeground(__id, __notif)
+})
                 if (AppDetectionService.isFacebookActive) {
                     showFloatingButton()
                 }
