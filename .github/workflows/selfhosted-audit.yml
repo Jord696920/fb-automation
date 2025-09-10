@@ -1,0 +1,61 @@
+﻿name: selfhosted-audit
+on:
+  workflow_dispatch:
+
+jobs:
+  audit:
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: PASS/FAIL checklist
+        shell: pwsh
+        run: |
+          $ok = $true
+          function Check($name, $cond) {
+            if ($cond) { "✅ $name" } else { "❌ $name"; $script:ok = $false }
+          }
+
+          $svc = "android-app/app/src/main/java/com/seqautomotive/fbautomation/FloatingButtonService.kt"
+          $gradle = "android-app/app/build.gradle"
+          $man = "android-app/app/src/main/AndroidManifest.xml"
+
+          $svcTxt = Get-Content -Raw $svc
+          $grdTxt = Get-Content -Raw $gradle
+          $manTxt = Get-Content -Raw $man
+
+          $checks = @(
+            ("Service: has START_SESSION", $svcTxt -match '\"START_SESSION\"'),
+            ("Service: 3-arg startForeground DATA_SYNC", $svcTxt -match 'startForeground\([^,]+,[^,]+,\s*ServiceInfo\.FOREGROUND_SERVICE_TYPE_DATA_SYNC\)'),
+            ("Service: SHOW/HIDE actions present", $svcTxt -match '\"SHOW\"|\"HIDE\"'),
+            ("Gradle: kotlin-kapt plugin", $grdTxt -match "id\s+'kotlin-kapt'"),
+            ("Gradle: coroutines-android", $grdTxt -match 'kotlinx-coroutines-android'),
+            ("Gradle: coroutines-play-services", $grdTxt -match 'kotlinx-coroutines-play-services'),
+            ("Gradle: room-compiler via kapt", $grdTxt -match 'kapt\s+\"androidx\.room:room-compiler'),
+            ("Manifest: FOREGROUND_SERVICE_DATA_SYNC perm", $manTxt -match 'FOREGROUND_SERVICE_DATA_SYNC'),
+            ("Manifest: service dataSync type", $manTxt -match 'FloatingButtonService[^>]+foregroundServiceType="dataSync"')
+          )
+
+          $checks | ForEach-Object { Check $_[0] $_[1] } | Tee-Object checks.txt
+
+          # Write a clear summary for you (and for ChatGPT)
+          "## Audit results"          | Out-File $env:GITHUB_STEP_SUMMARY -Encoding utf8
+          Get-Content checks.txt      | Out-File $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
+
+          if (-not $ok) { exit 1 }
+
+      - name: Kotlin compile smoke
+        shell: pwsh
+        working-directory: android-app
+        run: .\gradlew.bat :app:compileDebugKotlin --stacktrace --no-daemon
+
+      - name: Upload audited files
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: audit-files
+          path: |
+            android-app/app/src/main/java/com/seqautomotive/fbautomation/FloatingButtonService.kt
+            android-app/app/build.gradle
+            android-app/app/src/main/AndroidManifest.xml
+            checks.txt
