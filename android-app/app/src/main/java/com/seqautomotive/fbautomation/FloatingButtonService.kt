@@ -77,7 +77,9 @@ class FloatingButtonService : Service() {
             } else {
                 startForeground(id, notif)
             }
-            try { if (AppDetectionService.isFacebookActive) showFloatingButton() } catch (_: Throwable) {}
+            try {
+                if (AppDetectionService.isFacebookActive) showFloatingButton()
+            } catch (_: Throwable) {}
         }
         "STOP_SESSION" -> {
             isSessionActive = false
@@ -91,7 +93,7 @@ class FloatingButtonService : Service() {
     return START_STICKY
 }else {
     startForeground(__id, __notif)
-}} else {
+} else {
     val __notif = androidx.core.app.NotificationCompat.Builder(this, "fb_session")
     .setSmallIcon(R.drawable.ic_notification)
     .setContentTitle("FB Automation running")
@@ -101,24 +103,18 @@ class FloatingButtonService : Service() {
 val __id = 1001
 if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
     startForeground(__id, __notif, ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
-} else {
+else {
     startForeground(__id, __notif)
-}})
+})
                 if (AppDetectionService.isFacebookActive) {
                     showFloatingButton()
-                }
-            }
+}
             "STOP_SESSION" -> {
                 isSessionActive = false
                 hideFloatingButton()
                 stopForeground(true)
-                stopSelf()
-            }
-        }
-        return START_STICKY
-    }
-    
-    private fun showFloatingButton() {
+}
+private fun showFloatingButton() {
         if (floatingView != null) return
         
         floatingView = LayoutInflater.from(this).inflate(R.layout.floating_button, null)
@@ -229,5 +225,7 @@ if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
         serviceScope.cancel()
     }
 }
+
+
 
 
