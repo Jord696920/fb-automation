@@ -1,0 +1,85 @@
+﻿name: ci(self-hosted): build ➜ install ➜ launch ➜ logs (USB device)
+
+on:
+  push:
+    branches: [ "fix/**", "feat/**", "bugfix/**" ]
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch: {}
+
+jobs:
+  build-install:
+    runs-on: self-hosted
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+          cache: gradle
+
+      - name: Ensure Android platform-tools on runner
+        shell: pwsh
+        run: |
+          $pt = "$env:USERPROFILE\platform-tools"
+          if (!(Test-Path $pt\adb.exe)) {
+            $zip = "$env:USERPROFILE\platform-tools.zip"
+            Invoke-WebRequest -Uri https://dl.google.com/android/repository/platform-tools-latest-windows.zip -OutFile $zip
+            Expand-Archive $zip -DestinationPath $env:USERPROFILE -Force
+            Remove-Item $zip -Force
+          }
+          echo "$pt" >> $env:GITHUB_PATH
+
+      - name: Build debug APK
+        working-directory: android-app
+        shell: pwsh
+        run: .\gradlew.bat clean :app:assembleDebug --no-daemon --stacktrace
+
+      - name: Locate APK
+        id: findapk
+        shell: pwsh
+        run: |
+          $apk = Get-ChildItem -Recurse "android-app\app\build\outputs\apk\debug\*.apk" | Select-Object -First 1 -Expand FullName
+          if (-not $apk) { throw "APK not found" }
+          "apk=$apk" >> $env:GITHUB_OUTPUT
+
+      - name: ADB: install & launch (best-effort)
+        if: ${{ always() }}
+        shell: pwsh
+        run: |
+          adb start-server
+          adb devices
+          adb uninstall com.seqautomotive.fbautomation 2>$null | Out-Null
+          adb install -r "${{ steps.findapk.outputs.apk }}"
+          # Try launch main activity
+          adb shell am force-stop com.seqautomotive.fbautomation
+          adb shell monkey -p com.seqautomotive.fbautomation -c android.intent.category.LAUNCHER 1
+          Start-Sleep -Seconds 8
+
+      - name: Collect logs (always)
+        if: ${{ always() }}
+        shell: pwsh
+        run: |
+          adb logcat -c
+          # Grab crash buffer and full buffer
+          adb logcat -b crash -d > logcat_crash.txt
+          adb logcat -d -v threadtime > logcat_full.txt
+          adb shell dumpsys activity top > dumpsys_activity.txt
+          adb shell dumpsys package com.seqautomotive.fbautomation > dumpsys_pkg.txt
+
+      - name: Upload artifacts
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: device-logs-and-apk
+          path: |
+            ${{ steps.findapk.outputs.apk }}
+            logcat_crash.txt
+            logcat_full.txt
+            dumpsys_activity.txt
+            dumpsys_pkg.txt
+          if-no-files-found: warn
