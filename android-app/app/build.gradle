@@ -1,9 +1,7 @@
-
 plugins {
-    id 'kotlin-kapt'
     id 'com.android.application'
     id 'org.jetbrains.kotlin.android'
-    id 'kotlin-kapt'                       // <-- needed so Room generates *_Impl
+    id 'kotlin-kapt'
 }
 
 android {
